@@ -429,7 +429,10 @@ int
 func_2(int flowlet_id) {
         //gettimeofday(&tp, NULL);
         //return tp.tv_sec * 1000 + tp.tv_usec / 1000 - tmp_time;
-        return (flowlet_id % 10)/ 2;
+        if (flowlet_id % 10 < 5) {
+                return 1;
+        }
+        return 2;
 }
 //-----------------------------------
 
@@ -532,8 +535,7 @@ flid2hash1(int flowlet_id, int i) {
 
 int 
 flid2hash2(int flowlet_id, int i) {
-	int tmp = flowlet_id % 10;
-	return (tmp * tmp * tmp + flowlet_table[i][1]) % 3 + first_wkrs_num;
+	return (flowlet_id / 30000 + flowlet_table[i][1]) % 3 + first_wkrs_num;
 }
 
 int

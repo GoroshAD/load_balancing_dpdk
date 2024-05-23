@@ -431,7 +431,10 @@ int
 func_2(int flowlet_id) {
         //gettimeofday(&tp, NULL);
         //return tp.tv_sec * 1000 + tp.tv_usec / 1000 - tmp_time;
-        return (flowlet_id % 10)/ 2;
+        if (flowlet_id % 10 < 5) {
+                return 1;
+        }
+        return 2;
 }
 //-----------------------------------
 
@@ -583,9 +586,9 @@ find_worker1(int flowlet_id)
 		wkr = min_ind;
 		flowlet_table[flowlet_number - 1][1] = min_ind;
 		flowlet_table[flowlet_number - 1][2] = first_wkrs_num + 1;
+		wkrs1_connections[wkr] += 1;   //new flowlet added to wkr
 	}
 	
-	wkrs1_connections[wkr] += 1;
 	//printf("finish\n");
 	return wkr;
 }
@@ -622,6 +625,7 @@ find_worker2(int flowlet_id)
                 }
                 wkr = min_ind;
                 flowlet_table[need_just2][2] = min_ind;
+		wkrs2_connections[wkr] += 1;
         } else if (new_flowlet) {
                 ++flowlet_number;
                 flowlet_table = realloc(flowlet_table, flowlet_number * sizeof(int *));
@@ -640,13 +644,14 @@ find_worker2(int flowlet_id)
                         }
                 }
                 wkr = min_ind;
+		flowlet_table[flowlet_number - 1][1] = first_wkrs_num + 1;
                 flowlet_table[flowlet_number - 1][2] = min_ind;
-        }
+        	wkrs2_connections[wkr] += 1;
+	}
         //printf("emm?\n");
 
         //wkr_table2[ret_wkr - first_wkrs_num] += func2; // to release
         //printf("finish\n");
-	wkrs2_connections[wkr] += 1;  
         return wkr + first_wkrs_num;
 }
 
@@ -656,6 +661,17 @@ table_update()
         //here
         //printf("now is %lld\n", time_now);
         //print_flowlet_table();
+	if (time_now == 0) {
+                gettimeofday(&tp, NULL);
+                time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+                for (int i = 0; i < flowlet_number; ++i) {
+                        free(flowlet_table[i]);
+                }
+                free(flowlet_table);
+                flowlet_table = calloc(0, sizeof(int *));
+                flowlet_number = 0;
+                return;
+        }
 	gettimeofday(&tp, NULL);
         time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
         int **tmp_flowlet_table = calloc(0, sizeof(int *));
@@ -670,7 +686,10 @@ table_update()
                         for (int j = 0; j < FIELDS; ++j) {
                                 tmp_flowlet_table[tmp_flowlet_number - 1][j] = flowlet_table[i][j];
                                                 }
-                }
+                } else {
+			if (flowlet_table[i][2] == first_wkrs_num + 1) wkrs1_connections[flowlet_table[i][1]] -= 1;
+			if (flowlet_table[i][1] == first_wkrs_num + 1) wkrs2_connections[flowlet_table[i][2]] -= 1;
+		}
         }
         for (int i = 0; i < flowlet_number; ++i) {
                 free(flowlet_table[i]);

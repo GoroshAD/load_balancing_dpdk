@@ -420,16 +420,19 @@ handle_returns(struct rte_distributor *d, unsigned int wkr)
 
 int
 func_1(int flowlet_id) {
-	//gettimeofday(&tp, NULL);
+        //gettimeofday(&tp, NULL);
         //return tp.tv_sec * 1000 + tp.tv_usec / 1000 - tmp_time;
-	return 1;
+        return 1;
 }
 
 int
 func_2(int flowlet_id) {
-	//gettimeofday(&tp, NULL);
+        //gettimeofday(&tp, NULL);
         //return tp.tv_sec * 1000 + tp.tv_usec / 1000 - tmp_time;
-        return (flowlet_id % 10)/ 2 | 1;
+        if (flowlet_id % 10 < 5) {
+                return 1;
+        }
+        return 2;
 }
 //-----------------------------------
 
@@ -438,7 +441,7 @@ release(struct rte_distributor *d, unsigned int wkr)
 {
 	struct rte_distributor_buffer *buf = &(d->bufs[wkr]);
 	unsigned int i;
-	//printf("start");
+
 	handle_returns(d, wkr);
 	if (unlikely(!d->active[wkr]))
 		return 0;
@@ -459,12 +462,11 @@ release(struct rte_distributor *d, unsigned int wkr)
 				RTE_DISTRIB_GET_BUF | RTE_DISTRIB_VALID_BUF;
 		d->in_flight_tags[wkr][i] = d->backlog[wkr].tags[i];
 		//-------------------------------------------
-		if (wkr < first_wkrs_num) {
+                if (wkr < first_wkrs_num) {
                         wkr_table1[wkr] += func_1(d->backlog[wkr].tags[i]);
                 } else {
                         wkr_table2[wkr - first_wkrs_num] += func_2(d->backlog[wkr].tags[i]);
                 }
-
                 //------------------------------------------i-
 	}
 	buf->count = i;
@@ -480,7 +482,6 @@ release(struct rte_distributor *d, unsigned int wkr)
 	 */
 	rte_atomic_store_explicit(&(buf->bufptr64[0]),
 		buf->bufptr64[0] & ~RTE_DISTRIB_GET_BUF, rte_memory_order_release);
-	//printf("finish\n");
 	return  buf->count;
 
 }
@@ -496,29 +497,30 @@ print_flowlet_table() {
 }
 
 void
+print_wkr_info() {
+        printf("-------------------------------------\n");
+        for (int i = 0; i < first_wkrs_num; ++i) {
+                printf("%d: %d\n", i, wkr_table1[i]);
+                wkr_table1[i] = 0;
+        }
+        printf("-------------------------------------\n");
+        for (int i = 0; i < second_wkrs_num; ++i) {
+                printf("%d: %d\n", i + first_wkrs_num, wkr_table2[i]);
+                wkr_table2[i] = 0;
+        }
+        printf("-------------------------------------\n");
+
+        return;
+}
+
+
+void
 adder_inf(int num_workers) 
 {
 	first_wkrs_num = num_workers / 2;
 	second_wkrs_num = num_workers - first_wkrs_num;
 	wkr_table1 = calloc(first_wkrs_num, sizeof(int));
 	wkr_table2 = calloc(second_wkrs_num, sizeof(int));
-}
-
-void
-print_wkr_info() {
-	printf("-------------------------------------\n");
-        for (int i = 0; i < first_wkrs_num; ++i) {
-                printf("%d: %d\n", i, wkr_table1[i]);
-		wkr_table1[i] = 0;
-        }
-        printf("-------------------------------------\n");
-        for (int i = 0; i < second_wkrs_num; ++i) {
-                printf("%d: %d\n", i + first_wkrs_num, wkr_table2[i]);
-		wkr_table2[i] = 0;
-        }
-        printf("-------------------------------------\n");
-
-	return;
 }
 
 void
@@ -544,20 +546,20 @@ free_inf() {
 int
 find_worker1(int flowlet_id)
 {
-	//printf("start\n");
-	int wkr = 0; //calloc(2, sizeof(int));
-	bool new_flowlet = true;
+        //printf("start\n");
+        int wkr = 0; //calloc(2, sizeof(int));
+        bool new_flowlet = true;
 
-	for (int i = 0; i < flowlet_number; ++i) {
-		if (flowlet_table[i][0] == flowlet_id) {   //find
-			gettimeofday(&tp, NULL);
+        for (int i = 0; i < flowlet_number; ++i) {
+                if (flowlet_table[i][0] == flowlet_id) {   //find
+                        gettimeofday(&tp, NULL);
                         time_last_pkt = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-			flowlet_table[i][3] = time_last_pkt;
-			wkr = flowlet_table[i][1];
-			new_flowlet = false;
-			break;
-		}
-	}
+                        flowlet_table[i][3] = time_last_pkt;
+                        wkr = flowlet_table[i][1];
+                        new_flowlet = false;
+                        break;
+                }
+        }
 	if (new_flowlet) {
 		++flowlet_number;
 		flowlet_table = realloc(flowlet_table, flowlet_number * sizeof(int *));
@@ -579,14 +581,16 @@ find_worker1(int flowlet_id)
 		flowlet_table[flowlet_number - 1][1] = min_ind;
 		flowlet_table[flowlet_number - 1][2] = first_wkrs_num + 1;
 	}
+	
 	//printf("finish\n");
 	return wkr;
 }
 
-int 
-find_worker2(int flowlet_id) {
-	//printf("start\n");
-	int wkr = 0;
+int
+find_worker2(int flowlet_id)
+{
+        //printf("start\n");
+        int wkr = 0; //calloc(2, sizeof(int));
         bool new_flowlet = true;
 	int need_just2 = -1;
         for (int i = 0; i < flowlet_number; ++i) {
@@ -604,7 +608,7 @@ find_worker2(int flowlet_id) {
                 }
         }
 	if (need_just2 >= 0) {
-		int min_ind = 0;
+                int min_ind = 0;
                 int min_val = -1;
                 for (int i = 0; i < second_wkrs_num; ++i) {
                         if (min_val == -1 || min_val > wkr_table2[i]) {
@@ -614,7 +618,7 @@ find_worker2(int flowlet_id) {
                 }
                 wkr = min_ind;
                 flowlet_table[need_just2][2] = min_ind;
-	} else if (new_flowlet) {
+        } else if (new_flowlet) {
                 ++flowlet_number;
                 flowlet_table = realloc(flowlet_table, flowlet_number * sizeof(int *));
                 flowlet_table[flowlet_number - 1] = calloc(FIELDS, sizeof(int));
@@ -632,8 +636,12 @@ find_worker2(int flowlet_id) {
                         }
                 }
                 wkr = min_ind;
+		flowlet_table[flowlet_number - 1][1] = first_wkrs_num + 1;
                 flowlet_table[flowlet_number - 1][2] = min_ind;
-        }
+	}
+        //printf("emm?\n");
+
+        //wkr_table2[ret_wkr - first_wkrs_num] += func2; // to release
         //printf("finish\n");
         return wkr + first_wkrs_num;
 }
@@ -641,33 +649,44 @@ find_worker2(int flowlet_id) {
 void
 table_update()
 {
-	//here
-	//printf("now is %lld\n", time_now);
-	//if (flowlet_number > 0) print_flowlet_table();
+        //here
+        //printf("now is %lld\n", time_now);
+        //print_flowlet_table();
+	if (time_now == 0) {
+		gettimeofday(&tp, NULL);
+        	time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+		for (int i = 0; i < flowlet_number; ++i) {
+                	free(flowlet_table[i]);
+        	}
+        	free(flowlet_table);
+        	flowlet_table = calloc(0, sizeof(int *));
+        	flowlet_number = 0;
+		return;
+	}
 	gettimeofday(&tp, NULL);
         time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-	int **tmp_flowlet_table = calloc(0, sizeof(int *));
-	int tmp_flowlet_number = 0;
+        int **tmp_flowlet_table = calloc(0, sizeof(int *));
+        int tmp_flowlet_number = 0;
         for (int i = 0; i < flowlet_number; ++i) {
-        	//printf("%d ", i);
-		//printf("%d, %lld %lld\n", time_now - flowlet_table[i][3], time_now, flowlet_table[i][3]);
+                //printf("%d ", i);
+                //printf("%d, %lld %lld\n", time_now - flowlet_table[i][3], time_now, flowlet_table[i][3]);
                 if (abs(time_now - flowlet_table[i][3]) <= DELTA) {   //addition
-			++tmp_flowlet_number;
+                        ++tmp_flowlet_number;
                         tmp_flowlet_table = realloc(tmp_flowlet_table, tmp_flowlet_number * sizeof(int *));
                         tmp_flowlet_table[tmp_flowlet_number - 1] = calloc(FIELDS, sizeof(int));
                         for (int j = 0; j < FIELDS; ++j) {
                                 tmp_flowlet_table[tmp_flowlet_number - 1][j] = flowlet_table[i][j];
-				                }
+                                                }
                 }
         }
-	for (int i = 0; i < flowlet_number; ++i) {
+        for (int i = 0; i < flowlet_number; ++i) {
                 free(flowlet_table[i]);
         }
         free(flowlet_table);
-	flowlet_table = tmp_flowlet_table;
+        flowlet_table = tmp_flowlet_table;
         flowlet_number = tmp_flowlet_number;
-	//printf("%d\n", flowlet_number);
-	return;
+        //printf("%d\n", flowlet_number);
+        return;
 }
 //----------------------------------------------------------
 
@@ -680,7 +699,6 @@ rte_distributor_process(struct rte_distributor *d,
 	static unsigned int wkr;
 	struct rte_mbuf *next_mb = NULL;
 	int64_t next_value = 0;
-	//printf("%lld\n", mbufs[0]->hash.usr);
 	uint16_t new_tag = 0;
 	alignas(RTE_CACHE_LINE_SIZE) uint16_t flows[RTE_DIST_BURST_SIZE];
 	unsigned int i, j, w, wid, matching_required;
@@ -721,22 +739,16 @@ rte_distributor_process(struct rte_distributor *d,
 			pkts = RTE_DIST_BURST_SIZE;
 
 		for (i = 0; i < pkts; i++) {
-			/*//------------------------------------------------
-			for (int j = 0; j < mbufs[next_idx + i]->data_len; ++j) {
-			printf("%d ", *((int)mbufs[next_idx + i]->buf_addr + rte_pktmbuf_mtod(mbufs[next_idx + i], int *) + j));
-			}
-			printf("\n");
-			//------------------------------------------------*/
 			if (mbufs[next_idx + i]) {
-				/* flows have to be non-zero */
-				if (mbufs[next_idx + i]->hash.usr == 0) {
-					flows[i] = 1;
-				} else {
-					flows[i] = mbufs[next_idx + i]->hash.usr; // | 1;
-				}	//printf("%lld\n", mbufs[next_idx + i]->hash.usr);
-				
-			} else
-				flows[i] = 0;
+                                /* flows have to be non-zero */
+                                if (mbufs[next_idx + i]->hash.usr == 0) {
+                                        flows[i] = 1;
+                                } else {
+                                        flows[i] = mbufs[next_idx + i]->hash.usr; // | 1;
+                                }       //printf("%lld\n", mbufs[next_idx + i]->hash.usr);
+
+                        } else
+                                flows[i] = 0;
 		}
 		for (; i < RTE_DIST_BURST_SIZE; i++)
 			flows[i] = 0;
@@ -776,21 +788,19 @@ rte_distributor_process(struct rte_distributor *d,
 			 */
 			/* flows MUST be non-zero */
 			if ((uint16_t)(next_mb->hash.usr) == 0) {
-				new_tag = 1;
-			} else {
-				new_tag = (uint16_t)(next_mb->hash.usr); // | 1; //(uint_16t)
-			}
-			//printf("%lld\n", new_tag);
-			++glob_counter;
-			if (glob_counter % 38872 == 0) {
-				print_wkr_info();
-			}
-			if (glob_counter % 3000 == 0) {
-				time_now = 0;
-				table_update();
-			}
-			//gettimeofday(&tp, NULL);
-			//time_last_pkt = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+                                new_tag = 1;
+                        } else {
+                                new_tag = (uint16_t)(next_mb->hash.usr); // | 1; //(uint_16t)
+                        }
+                        //printf("%lld\n", new_tag);
+                        ++glob_counter;
+                        if (glob_counter % 38872 == 0) {
+                                print_wkr_info();
+                        }
+                        if (glob_counter % 3000 == 0) {
+                                time_now = 0;
+                                table_update();
+                        }
 			/*
 			 * Uncommenting the next line will cause the find_match
 			 * function to be optimized out, making this function
@@ -798,17 +808,17 @@ rte_distributor_process(struct rte_distributor *d,
 			 */
 			/* matches[j] = 0; */
 			int flowlet_id_wkrs = 0;
-			if (new_tag % 2 == 0) {
-				//mbufs[next_idx++]->hash.usr = next_mb->hash.usr + 2;
-				//new_tag += 2;
-				flowlet_id_wkrs = find_worker1(new_tag);
-			} else {
-				//mbufs[next_idx++]->hash.usr = next_mb->hash.usr - 1;
-				//--new_tag;
-				//printf("here");
-				flowlet_id_wkrs = find_worker2(new_tag);
-			}
-			struct rte_distributor_backlog *bl =
+                        if (new_tag % 2 == 0) {
+                                //mbufs[next_idx++]->hash.usr = next_mb->hash.usr + 2;
+                                //new_tag += 2;
+                                flowlet_id_wkrs = find_worker1(new_tag);
+                        } else {
+                                //mbufs[next_idx++]->hash.usr = next_mb->hash.usr - 1;
+                                //--new_tag;
+                                //printf("here");
+                                flowlet_id_wkrs = find_worker2(new_tag);
+                        }
+                        struct rte_distributor_backlog *bl =
                                         &d->backlog[flowlet_id_wkrs];
 
                         if (unlikely(bl->count ==
@@ -821,13 +831,12 @@ rte_distributor_process(struct rte_distributor *d,
                                         continue;
                                 }
                         }
-                        /* Add to worker that already has flow */
+			/* Add to worker that already has flow */
 			unsigned int idx = bl->count++;
-
-                        bl->tags[idx] = new_tag;
-                        bl->pkts[idx] = next_value;
-
-			//printf("%d: %d\n", new_tag, flowlet_id_wkrs);
+	
+			bl->tags[idx] = new_tag;
+			bl->pkts[idx] = next_value;
+			//printf("%d: %d %d\n", new_tag, flowlet_id_wkrs_1[0], flowlet_id_wkrs_2);
 			//printf("done\n");
 		}
 		wkr = (wkr + 1) % d->num_workers;

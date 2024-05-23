@@ -431,7 +431,10 @@ int
 func_2(int flowlet_id) {
         //gettimeofday(&tp, NULL);
         //return tp.tv_sec * 1000 + tp.tv_usec / 1000 - tmp_time;
-        return (flowlet_id % 10)/ 2;
+        if (flowlet_id % 10 < 5) {
+                return 1;
+        }
+        return 2;
 }
 //-----------------------------------
 
@@ -633,6 +636,17 @@ table_update()
         //here
         //printf("now is %lld\n", time_now);
         //if (flowlet_number > 0) print_flowlet_table();
+	if (time_now == 0) {
+                gettimeofday(&tp, NULL);
+                time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+                for (int i = 0; i < flowlet_number; ++i) {
+                        free(flowlet_table[i]);
+                }
+                free(flowlet_table);
+                flowlet_table = calloc(0, sizeof(int *));
+                flowlet_number = 0;
+                return;
+        }
 	gettimeofday(&tp, NULL);
         time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;
         int **tmp_flowlet_table = calloc(0, sizeof(int *));

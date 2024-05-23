@@ -1044,7 +1044,7 @@ main(int argc, char *argv[])
 	t = rte_rdtsc() + freq;
 	while (!quit_signal) {
 		if (t < rte_rdtsc()) {
-			print_stats();
+			//print_stats();
 			t = rte_rdtsc() + freq;
 		}
 		sleep(5);
