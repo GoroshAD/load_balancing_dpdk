@@ -649,6 +649,7 @@ find_worker2(int flowlet_id)
 void
 table_update()
 {
+	//return;   //uncomment this for flows balancing
         //here
         //printf("now is %lld\n", time_now);
         //print_flowlet_table();

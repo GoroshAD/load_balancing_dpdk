@@ -590,6 +590,7 @@ find_worker2(int flowlet_id) {
 void
 table_update()
 {
+	//return;   //uncomment this for flows balancing
 	//printf("start_t\n");
 	gettimeofday(&tp, NULL);
         time_now = tp.tv_sec * 1000 + tp.tv_usec / 1000;

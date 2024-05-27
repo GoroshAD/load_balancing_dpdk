@@ -480,7 +480,7 @@ lcore_distributor(struct lcore_params *p)
 		}
 	}
 	//------------------------------------------
-	print_flowlet_table();
+	//print_flowlet_table();
 	free_inf();
 	//------------------------------------------
 	if (power_lib_initialised)

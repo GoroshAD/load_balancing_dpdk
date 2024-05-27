@@ -633,6 +633,7 @@ find_worker2(struct rte_distributor *d, int flowlet_id)
 void
 table_update()
 {
+	//return;   //uncomment this for flows balancing
         //here
         //printf("now is %lld\n", time_now);
         //if (flowlet_number > 0) print_flowlet_table();
