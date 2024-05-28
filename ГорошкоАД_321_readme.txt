@@ -130,7 +130,7 @@ dpdk/examples/distributor/main.c
 
 Шаг 3:
 Прописать следующие команды:
-- cd /home/admsys/dpdk/build
+- cd ~/dpdk/build
 - meson install
 (после этой команды придется один раз нажать согласие, а именно 'y')
 - sudo ./examples/dpdk-distributor -l 1-9,22 -n 4 -- -p f
